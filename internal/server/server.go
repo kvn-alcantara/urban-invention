@@ -9,6 +9,7 @@ func New() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", homeHandler)
 	mux.HandleFunc("/healthz", healthHandler)
+	mux.HandleFunc("/ping", pingHandler)
 	return mux
 }
 
@@ -32,6 +33,13 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 func healthHandler(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, response{
 		Message: "healthy",
+		Status:  "ok",
+	})
+}
+
+func pingHandler(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, response{
+		Message: "pong",
 		Status:  "ok",
 	})
 }
