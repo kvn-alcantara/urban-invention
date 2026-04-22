@@ -1,0 +1,70 @@
+name: Discord Alerts
+
+on:
+  push:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  notify-on-push:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Discord alert for commit push
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          REPOSITORY: ${{ github.repository }}
+          BRANCH: ${{ github.ref_name }}
+          ACTOR: ${{ github.actor }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          COMMIT_URL: ${{ github.event.head_commit.url }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "DISCORD_WEBHOOK_URL secret is not configured"
+            exit 1
+          fi
+
+          payload=$(jq -n \
+            --arg repository "$REPOSITORY" \
+            --arg branch "$BRANCH" \
+            --arg actor "$ACTOR" \
+            --arg commit_message "$COMMIT_MESSAGE" \
+            --arg commit_url "$COMMIT_URL" \
+            '{"content": ("🔔 Novo commit em **" + $repository + "**\\nBranch: `" + $branch + "`\\nAutor: **" + $actor + "**\\nMensagem: " + $commit_message + "\\n" + $commit_url)}')
+
+          curl -sS -X POST "$DISCORD_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "$payload"
+
+  notify-on-main-merge:
+    if: github.event_name == 'pull_request' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Discord alert for merge into main
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          REPOSITORY: ${{ github.repository }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          MERGED_BY: ${{ github.event.pull_request.merged_by.login }}
+          SOURCE_BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "DISCORD_WEBHOOK_URL secret is not configured"
+            exit 1
+          fi
+
+          payload=$(jq -n \
+            --arg repository "$REPOSITORY" \
+            --arg pr_title "$PR_TITLE" \
+            --arg pr_number "$PR_NUMBER" \
+            --arg pr_url "$PR_URL" \
+            --arg merged_by "$MERGED_BY" \
+            --arg source_branch "$SOURCE_BRANCH" \
+            '{"content": ("✅ Merge em **main** no repositório **" + $repository + "**\\nPR #" + $pr_number + ": " + $pr_title + "\\nBranch de origem: `" + $source_branch + "`\\nMerge por: **" + $merged_by + "**\\n" + $pr_url)}')
+
+          curl -sS -X POST "$DISCORD_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "$payload"
