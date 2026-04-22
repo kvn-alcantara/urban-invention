@@ -1,6 +1,6 @@
 # Urban Invention
 
-A small Go HTTP service scaffolded for future Dockerization.
+A small Go HTTP service scaffolded for future Dockerization
 
 ## Run
 
